@@ -1,0 +1,62 @@
+services:
+  api_product:
+    build: ./api_product/
+    container_name: product_service
+    ports:
+      - "3001:3000" 
+    depends_on:
+      mysql_product:
+        condition: service_healthy
+    env_file:
+      - ./api_product/.env
+    restart: always
+
+  mysql_product:
+    image: mysql:8
+    container_name: product_db
+    environment:
+      MYSQL_ROOT_PASSWORD: Root_Password123!
+      MYSQL_DATABASE: mydb_product
+      MYSQL_USER: product_user
+      MYSQL_PASSWORD: product_pass 
+    volumes:
+      - product_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pRoot_Password123!"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  api_client:
+    build: ./api_client/
+    container_name: client_service
+    ports:
+      - "3002:3000" 
+    depends_on:
+      mysql_client:
+        condition: service_healthy
+    env_file:
+      - ./api_client/.env
+    restart: always
+
+  mysql_client:
+    image: mysql:8
+    container_name: client_db
+    environment:
+      MYSQL_ROOT_PASSWORD: Root_Password123!
+      MYSQL_DATABASE: mydb_client
+      MYSQL_USER: client_user
+      MYSQL_PASSWORD: client_pass
+    volumes:
+      - client_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pRoot_Password123!"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+volumes:
+  product_db_data:
+  client_db_data:
