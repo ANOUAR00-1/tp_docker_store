@@ -10,6 +10,8 @@ services:
         condition: service_healthy
     env_file:
       - ./api_product/.env
+    environment:
+      - JWT_SECRET=my_secret_tokect_key
     restart: always
 
   # MySQL Database for Product Service
@@ -106,9 +108,69 @@ services:
         - api_client
         - api_commands
       restart: always
+  
+  # Api Authentication Service
+  api_auth:
+    build: ./api_auth
+    container_name: auth_service
+    ports:
+      - "3004:3000"
+    environment:
+      - DB_HOST=auth_db
+      - JWT_SECRET=my_secret_tokect_key
+    depends_on:
+      auth_db:
+        condition: service_healthy 
+    restart: always
+
+  # MySQL Database for Authentication Service
+  # MySQL Database for Auth Service
+  auth_db:
+    image: mysql:8
+    container_name: auth_db
+    environment:
+      MYSQL_ROOT_PASSWORD: Root_Password123!
+      MYSQL_DATABASE: auth_db
+      MYSQL_USER: auth_user
+      MYSQL_PASSWORD: auth_pass
+    volumes:
+      - auth_db_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-pRoot_Password123!",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+  
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   
+      - "15672:15672" 
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 
 
 volumes:
   product_db_data:
-  client_db_data:
   commands_db_data:
+  client_db_data:
+  auth_db_data:
+  rabbitmq_data:
