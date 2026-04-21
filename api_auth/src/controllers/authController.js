@@ -37,7 +37,7 @@ export const login = async (req, res) => {
 
 
 // verifyToken
-const verifyToken = (req, res, next) => {
+export const verifyToken = (req, res, next) => {
  const authHeader = req.headers['authorization'];
  const token = authHeader && authHeader.split(' ')[1];
  if (!token) return res.status(401).send("Unauthorized");
