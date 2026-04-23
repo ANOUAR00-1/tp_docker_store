@@ -1,4 +1,5 @@
 import { AppDataSource } from "../config/data-source.js"
+import { connectRabbitMQ, publishMessage, consumeMessage } from 'shared';
 
 export const getProducts = async (req, res) => {
     try {
@@ -92,3 +93,72 @@ export const deleteProduct = async (req, res) => {
         })
     }
 }
+
+
+
+export const startProductValidator = async () => {
+    try {
+        const channel = await connectRabbitMQ();
+
+        const queueName = 'product_validation_queue';
+        const routingKeyToListen = 'order.validate';
+        const routingKeyToSend = 'order.validated';
+
+        console.log(`[*] Product Service started Validator... Waiting for '${routingKeyToListen}' messages.`);
+
+        await consumeMessage(
+            channel,
+            queueName,
+            routingKeyToListen,
+            async (data) => {
+
+                let isValid = true;
+                let errorMessage = "";
+                let totalAmount = 0;
+
+                const repo = AppDataSource.getRepository("Product");
+
+                try {
+                    for (const item of data.products) {
+                        const product = await repo.findOneBy({ id: item.product_id });
+
+                        if (!product) {
+                            isValid = false;
+                            errorMessage = `Le produit ${item.product_id} n'existe pas.`;
+                            break;
+                        }
+                        if (product.stock < item.qte) {
+                            isValid = false;
+                            errorMessage = `Le produit ${product.name} est en rupture de stock. Quantité demandée: ${item.qte}, Stock disponible: ${product.stock}.`;
+                            break;
+                        }
+
+                        totalAmount += Number(product.price) * item.qte;
+                    }
+
+                    if (isValid) {
+                        for (const item of data.products) {
+                            await repo.decrement({ id: item.product_id }, "stock", item.qte);
+                        }
+                    }
+                } catch (err) {
+                    isValid = false;
+                    errorMessage = err.message;
+                }
+
+                const response = {
+                    commandId: data.commandId,
+                    service: "product",
+                    isValid,
+                    errorMessage,
+                    totalAmount
+                };
+
+                await publishMessage(channel, routingKeyToSend, response);
+            }
+        );
+
+    } catch (error) {
+        console.error("Error starting Product Validator:", error.message);
+    }
+};

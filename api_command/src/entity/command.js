@@ -1,10 +1,13 @@
 import mongoose from 'mongoose';
 
 const commandSchema = new mongoose.Schema({
- products: { type: [Number], required: true }, 
+ products: [{ 
+    product_id: { type: Number, required: true },
+    qte: { type: Number, required: true }
+ }], 
  client_id: { type: Number, required: true },
- amount: { type: Number, required: true },
- status: { type: String, default: 'Pending' }
+ total_price: { type: Number, default: 0 },
+ status: { type: String, enum: ['PENDING', 'CONFIRMED', 'CANCELLED'], default: 'PENDING' }
 }, { timestamps: true });
 
 export default mongoose.model('Command', commandSchema);

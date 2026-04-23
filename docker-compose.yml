@@ -1,7 +1,9 @@
 services:
   # API Product Service
   api_product:
-    build: ./api_product/
+    build:
+      context: .
+      dockerfile: ./api_product/Dockerfile
     container_name: product_service
     ports:
       - "3001:3000" 
@@ -66,7 +68,9 @@ services:
 
   # API Commands Service
   api_commands:
-    build: ./api_command/
+    build:
+      context: .
+      dockerfile: ./api_command/Dockerfile
     container_name: commands_service
     ports:
       - "3003:3000" 
@@ -88,10 +92,10 @@ services:
     volumes:
       - commands_db_data:/data/db
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: mongosh --quiet --username admin --password admin_password123 --authenticationDatabase admin --eval 'db.runCommand("ping").ok'
+      interval: 20s  
+      timeout: 10s
+      retries: 3
     restart: always
 
 
